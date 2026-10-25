@@ -47,7 +47,7 @@ jobs:
           # 응답 코드만 남긴다 (403: GRILL_BACKUP_SECRET이 로비와 다르거나 로비를 다시 배포하지 않음, 404: GRILL_LOBBY_URL이 틀림)
           code=$(curl -sS --retry 3 -o plan.json -w '%{http_code}' -H "Authorization: Bearer $BACKUP_SECRET" "${LOBBY_URL%/}/api/backups/plan" || echo 000)
           echo "로비 응답: $code"
-          [ "$code" = 200 ] || exit 1
+          [ "$code" = 200 ] || { echo "::error::로비 응답 $code"; exit 1; }
           n=$(jq -r '.shards' plan.json)
           echo "러너: $n"
           echo "shards=$(jq -c --argjson n "$n" -n '[range(0; $n)]')" >> "$GITHUB_OUTPUT"

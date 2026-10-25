@@ -44,8 +44,11 @@ jobs:
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
         run: |
           if [ -z "$LOBBY_URL" ] || [ -z "$BACKUP_SECRET" ] || [ -z "$R2_ACCESS_KEY_ID" ]; then echo "설정이 없어 건너뜁니다"; echo "shards=[]" >> "$GITHUB_OUTPUT"; exit 0; fi
-          plan=$(curl -fsS --retry 3 -H "Authorization: Bearer $BACKUP_SECRET" "${LOBBY_URL%/}/api/backups/plan")
-          n=$(jq -r '.shards' <<< "$plan")
+          # 응답 코드만 남긴다 (403: GRILL_BACKUP_SECRET이 로비와 다르거나 로비를 다시 배포하지 않음, 404: GRILL_LOBBY_URL이 틀림)
+          code=$(curl -sS --retry 3 -o plan.json -w '%{http_code}' -H "Authorization: Bearer $BACKUP_SECRET" "${LOBBY_URL%/}/api/backups/plan" || echo 000)
+          echo "로비 응답: $code"
+          [ "$code" = 200 ] || exit 1
+          n=$(jq -r '.shards' plan.json)
           echo "러너: $n"
           echo "shards=$(jq -c --argjson n "$n" -n '[range(0; $n)]')" >> "$GITHUB_OUTPUT"
 
